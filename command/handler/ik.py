@@ -8,10 +8,11 @@ from utils.math import rad2deg
 logger = get_logger("echo")
 
 @command("ik")
-async def ik_handler(websocket, *args):
+async def ik_handler(websocket, state, *args):
     """
     逆解坐标值
     :param websocket: websocket 对象
+    :param state:
     :param args: 命令参数
     :return: none
     """

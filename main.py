@@ -9,7 +9,7 @@ from utils.socket import WebSocketServer
 
 from control.control import control_state_machine
 from control.kinematics import fk
-from control.move import set_angle, catch_on
+from control.move import set_angle, catch_on, catch_off
 from utils.logger import get_logger
 from utils.math import deg2rad
 from utils.serials import Serials
@@ -82,6 +82,7 @@ def main():
     # 初始化机械臂构型
     angle1, angle2, angle3 = deg2rad(0, 0, 30)
     set_angle(angle1, angle2, angle3)
+    time.sleep(3)
     r, theta, h = fk(angle1, angle2, angle3)
     state.current_pos = r, theta, h
     catch_on()
@@ -149,7 +150,8 @@ def main():
         state.stop_request.set()
     finally:
         set_angle(deg2rad(0, 0, 0))
-        catch_on()
+        time.sleep(3)
+        catch_off()
         cap.release()
         cv2.destroyAllWindows()
         ctrl_t.join(timeout=1)

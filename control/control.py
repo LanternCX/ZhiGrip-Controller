@@ -33,6 +33,7 @@ class SMState(Enum):
     CATCH_GRAB = auto()
     # 抬升机械臂
     CATCH_ASCEND = auto()
+
     # 移动到目标框内
     CATCH_MOVE = auto()
     # 下降夹爪到放置高度
@@ -229,8 +230,8 @@ def control_state_machine(state, frame_w, frame_h,
             state.logger.info("SM: Catch descend 10cm")
             try:
                 r0, theta0, h0 = state.pre_catch_pos
-                move_to(r0 - 50, theta0, h0 - 100)  # 向下 10 cm
-                state.current_pos = (r0 - 50, theta0, h0 - 100)
+                move_to(r0 - 60, theta0, h0 - 100)  # 向下 10 cm
+                state.current_pos = (r0 - 60, theta0, h0 - 100)
             except Exception as e:
                 state.logger.error(f"SM: error during descend: {e}")
                 sm_state = SMState.CATCH_END

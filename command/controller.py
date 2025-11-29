@@ -4,6 +4,7 @@ import json
 import command.handler  # 命令包
 from utils.logger import get_logger
 from .registry import COMMAND_REGISTRY
+from shared.state import state
 
 logger = get_logger("controller")
 
@@ -35,7 +36,7 @@ async def dispatch_command(cmd: str, args: list, websocket):
         return
 
     try:
-        res = await handler(websocket, *args)
+        res = await handler(websocket, state, *args)
 
         # 在这里立即复制一份，防止引用变动
         res_copy = json.loads(json.dumps(res)) if res is not None else None

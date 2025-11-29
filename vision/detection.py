@@ -12,10 +12,11 @@ DETECTOR_MAP = {
     "green": ColorDetector,
     "red": ColorDetector,
     "blue": ColorDetector,
+    "yellow": ColorDetector,
     "yolo": YoloDetector,
 }
 
-def get_detector(tag="green"):
+def get_detector(tag="yellow"):
     if tag in DETECTOR_INSTANCES:
         return DETECTOR_INSTANCES[tag]
 
@@ -27,18 +28,36 @@ def get_detector(tag="green"):
 
     # YOLO 可以选择关闭标签过滤，先显示所有框
     if tag == "yolo":
-        detector = detector_class(tag=None, filter_by_tag=False)
+        detector = detector_class(tag="workpiece", filter_by_tag=True)
     else:
         detector = detector_class(tag)
 
     DETECTOR_INSTANCES[tag] = detector
     return detector
 
-def detect_boxes(frame, tag="yolo"):
+def detect_boxes(frame, tag="yellow"):
     detector = get_detector(tag)
     if detector is None:
         return [], frame
-    return detector.detect(frame)
+
+    boxes, frame = detector.detect(frame)
+
+    # 获取图像中心点
+    h, w = frame.shape[:2]
+    cx, cy = w // 2, h // 2
+
+    # 定义计算框中心点到图像中心距离的函数
+    def center_distance(box):
+        (x1, y1), (x2, y2) = box
+        bx = (x1 + x2) / 2
+        by = (y1 + y2) / 2
+        return (bx - cx) ** 2 + (by - cy) ** 2  # 平方距离即可，无需开方
+
+    # 排序：距离近的排在前面
+    boxes = sorted(boxes, key=center_distance)
+
+    return boxes, frame
+
 
 # 以下函数保持不变
 prev_centers = []

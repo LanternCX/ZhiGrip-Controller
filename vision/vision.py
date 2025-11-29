@@ -32,7 +32,8 @@ def vision_thread_func(state, VISION_SLEEP=0.01):
             state.valid_target_count = num_boxes
 
         # 规则：奇数次抓取时目标数应为偶数，偶数次抓取时目标数应为奇数
-        should_proceed = (num_boxes > 0) and ((num_boxes % 2) == (state.catch_cnt % 2))
+        # should_proceed = (num_boxes > 0) and ((num_boxes % 2) == (state.catch_cnt % 2))
+        should_proceed = True
 
         if should_proceed:
             state.has_target = True

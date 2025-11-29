@@ -9,10 +9,11 @@ from utils.math import rad2deg, deg2rad
 logger = get_logger("echo")
 
 @command("fk")
-async def fk_handler(websocket, *args):
+async def fk_handler(websocket, state, *args):
     """
     正解运动学
     :param websocket: websocket 对象
+    :param state: 全局共享状态
     :param args: 命令参数
     :return: none
     """

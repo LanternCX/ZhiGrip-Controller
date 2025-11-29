@@ -18,8 +18,8 @@ def move_to_box(boxes, frame_w, frame_h, now_r, now_theta, now_h):
         return now_r, now_theta, now_h
 
     cx, cy = center
-    dy = (cx - frame_w / 2) * (REAL_W / frame_w)
-    dx = (cy - frame_h / 2) * (READ_H / frame_h)
+    dy = -(cx - frame_w / 2) * (REAL_W / frame_w)
+    dx = -(cy - frame_h / 2) * (READ_H / frame_h)
 
     now_x, now_y, now_z = polar2xyz(now_r, now_theta, now_h)
     target_x = now_x + dx

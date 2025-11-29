@@ -8,10 +8,11 @@ from vision.detection import detect_boxes
 logger = get_logger("catch")
 
 @command("catch")
-async def catch_handler(websocket, *args):
+async def catch_handler(websocket, state, *args):
     """
     echo command demo
     :param websocket: websocket 对象
+    :param state: 全局共享状态
     :param args: 命令参数
     :return: none
     """

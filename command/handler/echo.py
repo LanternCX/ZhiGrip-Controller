@@ -6,10 +6,11 @@ from utils.logger import get_logger
 logger = get_logger("echo")
 
 @command("echo")
-async def echo_handler(websocket, *args):
+async def echo_handler(websocket, state, *args):
     """
     echo command demo
     :param websocket: websocket 对象
+    :param state: 全局共享状态
     :param args: 命令参数
     :return: none
     """
