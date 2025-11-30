@@ -104,7 +104,10 @@ def main():
     ws_thread.start()
 
     logger.info("WebSocket server thread started.")
+    # 主视觉窗口
     cv2.namedWindow("frame", cv2.WINDOW_NORMAL)
+    # 缺陷检测窗口
+    cv2.namedWindow("inspection", cv2.WINDOW_NORMAL)
 
     # OpenCV 调试窗口主循环（运行在主线程中）
     try:
@@ -115,6 +118,16 @@ def main():
                 sm_state = state.sm_state
                 adjust_cnt = state.adjust_count
                 last_err = state.last_error
+
+            # === 新增：显示检测结果截图 ===
+            insp_frame = state.inspection_frame
+            if insp_frame is not None:
+                # 在图上加个状态文字
+                status_text = "DEFECT" if state.is_defective else "OK"
+                color = (0, 0, 255) if state.is_defective else (0, 255, 0)
+                cv2.putText(insp_frame, status_text, (10, 25), cv2.FONT_HERSHEY_SIMPLEX,
+                            0.8, color, 2)
+                cv2.imshow("inspection", insp_frame)
 
             if frame is not None:
                 info_lines = [

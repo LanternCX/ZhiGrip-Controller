@@ -41,6 +41,14 @@ class SharedState:
         # 抓取前位置，用于抓取流程
         self.pre_catch_pos = None
 
+        # 缺陷检测相关
+        # 标记当前目标是否有缺陷
+        self.is_defective = False
+        # 用于在界面显示的截取图
+        self.inspection_frame = None
+        # 缺陷列表
+        self.inspections = []
+
         # 用于控制多线程同步
         self.condition = threading.Condition()
 

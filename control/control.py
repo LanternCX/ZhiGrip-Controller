@@ -7,6 +7,12 @@ from vision.detection import get_first_box_center
 from .kinematics import fk
 from .move import move_to, catch_on, catch_off, set_angle
 
+from vision.inspection import inspect_target
+from vision.detectors.yolo import YoloDetector
+
+# 初始化一个专用的检测器实例（或者重用 vision 里的，但这里单独实例化比较安全）
+inspector_yolo = YoloDetector(tag=None, filter_by_tag=False)
+
 
 # 状态机状态定义
 class SMState(Enum):
@@ -24,6 +30,9 @@ class SMState(Enum):
     ALIGN_DONE = auto()
     # 对齐失败
     ALIGN_FAILED = auto()
+
+    # 缺陷检测
+    INSPECT_DEFECT = auto()
 
     # 准备抓取
     CATCH_BEGIN = auto()
@@ -202,7 +211,7 @@ def control_state_machine(state, frame_w, frame_h,
         elif sm_state == SMState.ALIGN_DONE:
             state.logger.info(f"SM: micro-adjust success after {adjust_count} attempts. error={last_error}")
             state.move_done.set()
-            sm_state = SMState.CATCH_BEGIN
+            sm_state = SMState.INSPECT_DEFECT
             adjust_count = 0
             last_error = None
 
@@ -212,6 +221,35 @@ def control_state_machine(state, frame_w, frame_h,
             sm_state = SMState.CATCH_BEGIN
             adjust_count = 0
             last_error = None
+
+        # 2. 实现检测状态逻辑
+        elif sm_state == SMState.INSPECT_DEFECT:
+            with state.lock:
+                # 获取当前时刻的最新画面和目标框
+                curr_frame = state.frame.copy() if state.frame is not None else None
+                boxes = list(state.boxes)  # 此时已经对齐，boxes[0] 应该就在画面中心
+
+            if curr_frame is not None and len(boxes) > 0:
+                target_box = boxes[0]  # 取最靠近中心的框
+
+                # 调用 inspection 逻辑
+                is_ng, labels, roi_img = inspect_target(curr_frame, target_box, margin=60)
+
+                # 更新 state 以便在界面显示
+                state.is_defective = is_ng
+                state.inspection_frame = roi_img
+
+                if is_ng:
+                    state.logger.warning(f"Target is DEFECTIVE! Labels: {labels}")
+                else:
+                    state.logger.info("Target is GOOD.")
+            else:
+                state.logger.error("Cannot inspect: no frame or no box found.")
+                state.is_defective = False  # 默认当作好的，或者你可以报错停止
+
+            # 检测完毕，开始抓取
+            sm_state = SMState.CATCH_BEGIN
+            time.sleep(0.5)  # 给一点时间让界面刷新显示截图
 
         elif sm_state == SMState.CATCH_BEGIN:
             state.logger.info("SM: Catch begin -> preparing to grab")
@@ -263,25 +301,49 @@ def control_state_machine(state, frame_w, frame_h,
             sm_state = SMState.CATCH_MOVE
             time.sleep(5)
 
+        # elif sm_state == SMState.CATCH_MOVE:
+        #     state.logger.info("SM: Catch move to target box")
+        #     try:
+        #         # 根据抓取次数决定放置方向
+        #         if state.catch_cnt % 2 == 0:  # 奇数次抓取（计数从0开始）
+        #             angle_offset = deg2rad(90, 0, 0)
+        #             state.logger.info("Placing object to +60° side.")
+        #         else:  # 偶数次抓取
+        #             angle_offset = deg2rad(-90, 0, 0)
+        #             state.logger.info("Placing object to -60° side.")
+        #
+        #         set_angle(angle_offset)
+        #         state.current_pos = fk(angle_offset[0], angle_offset[1], angle_offset[2])
+        #     except Exception as e:
+        #         state.logger.error(f"SM: error during move: {e}")
+        #         sm_state = SMState.CATCH_END
+        #
+        #     sm_state = SMState.CATCH_PUT_DESCEND
+        #     time.sleep(15)
+
         elif sm_state == SMState.CATCH_MOVE:
             state.logger.info("SM: Catch move to target box")
             try:
-                # 根据抓取次数决定放置方向
-                if state.catch_cnt % 2 == 0:  # 奇数次抓取（计数从0开始）
+                # === 修改：根据缺陷结果决定放置位置 ===
+                if state.is_defective:
+                    state.logger.warning(f"Target is DEFECTIVE. Placing to LEFT.")
+                    # 有缺陷 -> 放左边 (+90度 或者你定义的左侧坐标)
+                    # 假设 +60 度是左边
                     angle_offset = deg2rad(90, 0, 0)
-                    state.logger.info("Placing object to +60° side.")
-                else:  # 偶数次抓取
+                else:
+                    state.logger.info("Target is GOOD. Placing to RIGHT.")
+                    # 无缺陷 -> 放右边
                     angle_offset = deg2rad(-90, 0, 0)
-                    state.logger.info("Placing object to -60° side.")
 
                 set_angle(angle_offset)
                 state.current_pos = fk(angle_offset[0], angle_offset[1], angle_offset[2])
             except Exception as e:
                 state.logger.error(f"SM: error during move: {e}")
                 sm_state = SMState.CATCH_END
+                continue  # 加上 continue 防止直接进入下一步
 
             sm_state = SMState.CATCH_PUT_DESCEND
-            time.sleep(15)
+            time.sleep(10)  # 这里的 sleep 需要根据机械臂实际运动速度调整
 
         elif sm_state == SMState.CATCH_PUT_DESCEND:
             state.logger.info("SM: Descending to put position (10 cm down)")
